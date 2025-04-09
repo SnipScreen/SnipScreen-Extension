@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "SnipScreen",
+  "version": "1.0",
+  "description": "A Chrome Extension for capturing, cropping, annotating, and sharing screenshots",
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "storage",
+    "tabs",
+    "notifications",
+    "clipboardWrite"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Take Screenshot",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [{
+    "resources": [
+        "editor/editor.html",
+        "editor/editor.css",
+        "editor/editor.js",
+        "editor/editor-init.js",
+        "editor/editor-canvas.js",
+        "editor/editor-tools.js",
+        "editor/editor-events.js",
+        "editor/editor-ui.js",
+        "editor/editor-utils.js"
+      ],
+    "matches": ["<all_urls>"]
+  }]
+}

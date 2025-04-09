@@ -1,0 +1,240 @@
+:root {
+  /* Color Palette */
+  --primary-accent: #007AFF;
+  --primary-accent-light: rgba(0, 122, 255, 0.1);
+  --primary-accent-medium: rgba(0, 122, 255, 0.15);
+  --primary-accent-dark: rgba(0, 122, 255, 0.4);
+
+  --text-primary: #1c1c1e;
+  --text-secondary: #6b6b70;
+  --text-on-accent: #FFFFFF;
+  --text-annotation-default: #333333;
+
+  --bg-page: #f8f8fa;
+  --bg-element: #FFFFFF;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-toast: rgba(50, 50, 50, 0.9);
+
+  --border-light: #e0e0e0;
+  --border-focus: rgba(0, 122, 255, 0.3);
+
+  /* Spacing & Radii */
+  --spacing-xs: 4px;
+  --spacing-s: 8px;
+  --spacing-m: 12px;
+  --spacing-l: 16px;
+  --spacing-xl: 24px;
+
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --radius-l: 12px;
+  --radius-toast: 14px;
+
+  /* Shadows & Transitions */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  --transition-speed: 0.2s;
+  --transition-timing: ease-in-out;
+}
+
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+/* Toolbar */
+.toolbar {
+  padding: var(--spacing-s) var(--spacing-l);
+  background: var(--bg-element);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-subtle);
+}
+
+.tool-group {
+  display: flex;
+  gap: var(--spacing-m);
+  max-width: 400px;
+  width: 100%;
+  justify-content: center;
+}
+
+.tool-item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary); /* Default icon color */
+  cursor: pointer;
+  transition: background-color var(--transition-speed) var(--transition-timing),
+              color var(--transition-speed) var(--transition-timing);
+  position: relative;
+  border-radius: var(--radius-m);
+  border: none;
+}
+
+.tool-item i {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.tool-item:hover {
+  color: var(--primary-accent);
+  background: var(--primary-accent-light);
+}
+
+.tool-item.active {
+  color: var(--primary-accent);
+  background: var(--primary-accent-medium);
+}
+
+/* Divider for Share Tool */
+.tool-item#shareTool {
+  margin-left: var(--spacing-xs);
+  padding-left: var(--spacing-m);
+  border-left: 1px solid var(--border-light);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* Tooltip */
+.tool-item::after {
+  content: attr(title);
+  position: absolute;
+  top: calc(100% + var(--spacing-xs));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-toast);
+  color: var(--text-on-accent);
+  padding: var(--spacing-xs) var(--spacing-s);
+  border-radius: var(--radius-s);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-speed) var(--transition-timing);
+  pointer-events: none;
+  z-index: 110;
+}
+
+.tool-item:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Editor Container */
+#editorContainer {
+  /* Approx toolbar height = 36px + (8px * 2) padding = 52px */
+  margin: calc(52px + var(--spacing-l)) var(--spacing-xl) var(--spacing-xl);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: auto;
+  height: calc(100vh - 52px - (2 * var(--spacing-xl)));
+  padding-top: var(--spacing-m);
+}
+
+/* Editor Canvas */
+#editorCanvas {
+  background: var(--bg-element);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-medium);
+  transition: transform var(--transition-speed) var(--transition-timing),
+              box-shadow var(--transition-speed) var(--transition-timing),
+              border var(--transition-speed) var(--transition-timing);
+  border: 2px solid transparent;
+  object-fit: contain;
+  display: block;
+
+  /* Pixelated scaling for sharpness */
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+#editorCanvas:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+#editorCanvas:focus,
+#editorCanvas.focused {
+  transform: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--border-focus);
+  outline: none;
+}
+
+/* Text Input Overlay */
+#textInputOverlay {
+  position: absolute;
+  display: none; /* Hidden by default */
+  background-color: var(--bg-element);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-medium);
+  font: 16px/1.4 sans-serif;
+  padding: var(--spacing-s) var(--spacing-m);
+  margin: 0;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+  outline: none;
+  z-index: 110;
+}
+
+#textInputOverlay:focus {
+    border-color: var(--primary-accent);
+    box-shadow: 0 0 0 2px var(--primary-accent-light); /* Focus ring */
+}
+
+/* Toast Notification */
+.toast {
+  position: fixed;
+  bottom: var(--spacing-xl);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px); /* Initial position */
+  background: var(--bg-toast);
+  backdrop-filter: blur(8px);
+  color: var(--text-on-accent);
+  padding: var(--spacing-m) var(--spacing-l);
+  border-radius: var(--radius-toast);
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity var(--transition-speed) var(--transition-timing),
+              transform var(--transition-speed) var(--transition-timing);
+  z-index: 1000;
+  box-shadow: var(--shadow-toast);
+  pointer-events: none;
+  max-width: 80%;
+  text-align: center;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0); /* Final position */
+}
+
+/* Spinner */
+.spinner {
+    cursor: default;
+    color: var(--text-secondary);
+}
