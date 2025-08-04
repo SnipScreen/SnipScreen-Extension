@@ -59,10 +59,10 @@ const handleScreenshot = debounce(async (tab, cropOnly = false) => {
       throw new Error(`Cannot capture system pages (${tab.url.split('//')[0]}) or local files.`);
     }
 
-    // Capture the visible part of the tab
+    // Capture the visible part of the tab with high quality settings
     const screenshotUrl = await chrome.tabs.captureVisibleTab(null, {
-      format: 'png' // Use PNG for lossless quality
-      // quality: 100 // Quality setting is ignored for PNG
+      format: 'png', // Use PNG for lossless quality
+      quality: 100   // Maximum quality (though PNG is already lossless)
     });
 
     if (!screenshotUrl) throw new Error('Empty screenshot captured (check permissions or page content)');

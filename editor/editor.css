@@ -162,11 +162,13 @@ body {
   object-fit: contain;
   display: block;
 
-  /* Pixelated scaling for sharpness */
-  image-rendering: -moz-crisp-edges;
+  /* High-quality image rendering for better clarity */
   image-rendering: -webkit-optimize-contrast;
+  image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
-  image-rendering: pixelated;
+  image-rendering: -webkit-image-smoothing: high;
+  image-rendering: -moz-image-smoothing: high;
+  image-rendering: image-smoothing: high;
 }
 
 #editorCanvas:hover {

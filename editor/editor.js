@@ -117,8 +117,11 @@ class ScreenshotEditor {
 
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+    // Ensure high-quality rendering
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
     // 1. Draw base image
-    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(this.offscreenCanvas, 0, 0);
 
     // 2. Draw Annotations (Blackout Rects)

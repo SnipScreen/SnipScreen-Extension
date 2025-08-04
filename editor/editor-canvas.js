@@ -129,8 +129,11 @@ export function prepareFinalCanvas() {
   finalCanvas.width = sourceWidth;
   finalCanvas.height = sourceHeight;
 
+  // Enable high-quality rendering for the final canvas
+  finalCtx.imageSmoothingEnabled = true;
+  finalCtx.imageSmoothingQuality = 'high';
+
   // 1. Draw the base image
-  finalCtx.imageSmoothingEnabled = false; // Preserve sharpness
   finalCtx.drawImage(this.offscreenCanvas, 0, 0);
 
   // 2. Draw Annotation Elements (Blackout Rects)

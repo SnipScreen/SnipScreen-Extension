@@ -160,11 +160,15 @@ export async function loadScreenshot() {
         this.canvas.style.width = 'auto';
         this.canvas.style.height = 'auto';
 
-        this.offscreenCtx.imageSmoothingEnabled = false;
+        // Enable high-quality image smoothing for better clarity
+        this.offscreenCtx.imageSmoothingEnabled = true;
+        this.offscreenCtx.imageSmoothingQuality = 'high';
         this.offscreenCtx.clearRect(0,0, canvasWidth, canvasHeight);
         this.offscreenCtx.drawImage( this.canvasState.originalImage, 0, 0 );
 
-        this.ctx.imageSmoothingEnabled = false;
+        // Enable high-quality image smoothing for the main canvas as well
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
         this.ctx.drawImage(this.offscreenCanvas, 0, 0);
 
         this.updateCanvasRect();
