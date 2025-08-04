@@ -23,20 +23,8 @@ export function toggleTool(tool) {
   }
 
   // Define mutually exclusive drawing/interaction tools
-  const drawingTools = ['crop', 'annotate', 'text', 'arrow'];
+  const drawingTools = ['crop', 'annotate'];
   const otherDrawingTools = drawingTools.filter(t => t !== tool);
-
-  // If trying to activate a tool while actively editing text, finalize text first.
-  if (this.state.isEditingText) {
-    console.log("Finalizing text input before switching tool.");
-    this.finalizeTextInput();
-  }
-  
-  // If trying to activate a tool while actively drawing, cancel it first.
-  if (this.state.isDrawing && this.isToolActive('arrow') && tool !== 'arrow') {
-    console.log("Canceling arrow drawing before switching tool.");
-    this.cancelArrowDrawing();
-  }
 
   // If the clicked tool is already active, deactivate it.
   if (this.isToolActive(tool)) {
@@ -92,16 +80,6 @@ export function toggleTool(tool) {
         this.canvas.style.transform = 'translateY(-1px) scale(1.002)';
       }
       this.showToast(tool === 'crop' ? "Drag to select crop area." : "Click and drag to draw rectangles.", false, 'info');
-    } else if (tool === 'text') {
-      if (this.canvas) {
-        this.canvas.style.cursor = 'text';
-      }
-      this.showToast("Click on the image to add text.", false, 'info');
-    } else if (tool === 'arrow') {
-      if (this.canvas) {
-        this.canvas.style.cursor = 'crosshair';
-      }
-      this.showToast("Click and drag to draw an arrow.", false, 'info');
     }
   }
 }
@@ -203,74 +181,14 @@ export async function completeCrop() {
         return elementRight > 0 && elementBottom > 0 && element.x < newCanvasWidth && element.y < newCanvasHeight;
       });
 
-    // Adjust text elements (position only)
-    this.elements.textElements = this.elements.textElements
-      .map(element => {
-        const originalElementX = element.x * scaleX;
-        const originalElementY = element.y * scaleY;
-        const newX = originalElementX - clampedSourceX;
-        const newY = originalElementY - clampedSourceY;
-        return { ...element, x: Math.round(newX), y: Math.round(newY) };
-      })
-      .filter(element => {
-        // Keep text slightly outside bounds to handle text partially visible
-        return element.x < newCanvasWidth + 10 && element.y < newCanvasHeight + 10 && element.x > -500 && element.y > -50;
-      });
+    console.log("Adjusted annotation elements for crop.");
 
-    // Adjust arrow elements
-    this.elements.arrowElements = this.elements.arrowElements
-      .map(element => {
-        const originalX1 = element.x1 * scaleX;
-        const originalY1 = element.y1 * scaleY;
-        const originalX2 = element.x2 * scaleX;
-        const originalY2 = element.y2 * scaleY;
-        const newX1 = originalX1 - clampedSourceX;
-        const newY1 = originalY1 - clampedSourceY;
-        const newX2 = originalX2 - clampedSourceX;
-        const newY2 = originalY2 - clampedSourceY;
-        // Head size remains the same absolute pixel value for now
-        return { ...element, x1: Math.round(newX1), y1: Math.round(newY1), x2: Math.round(newX2), y2: Math.round(newY2) };
-      })
-      .filter(element => {
-        // Keep if either endpoint is somewhat within the new canvas bounds
-        const isP1Visible = element.x1 > -20 && element.x1 < newCanvasWidth + 20 && element.y1 > -20 && element.y1 < newCanvasHeight + 20;
-        const isP2Visible = element.x2 > -20 && element.x2 < newCanvasWidth + 20 && element.y2 > -20 && element.y2 < newCanvasHeight + 20;
-        return isP1Visible || isP2Visible;
-      });
-
-    console.log(`Adjusted/Scaled/Filtered elements. Annotations: ${this.elements.annotationElements.length}, Text: ${this.elements.textElements.length}, Arrows: ${this.elements.arrowElements.length}`);
-
-    // Update cached canvas rect
+    // Update canvas rectangle cache
     this.updateCanvasRect();
-
-    // Handle mode transition and user feedback
-    if (this.state.cropOnlyMode) {
-      document.querySelectorAll('.tool-item').forEach(tool => { 
-        if(tool.id !== 'spinner') tool.style.display = 'flex'; 
-      });
-      const cropToolElement = document.getElementById('cropTool');
-      // Make crop tool visible again, but not active
-      if (cropToolElement) { 
-        cropToolElement.style.display = 'flex'; 
-        cropToolElement.classList.remove('active'); 
-      }
-      this.state.cropOnlyMode = false;
-      try { 
-        if(chrome.storage) await chrome.storage.local.set({ cropOnlyMode: false }); 
-      } catch(e){ 
-        console.warn("Storage update failed", e)
-      }
-      this.state.activeTools.clear(); // Clear active tools set after crop-only mode
-      this.showToast('Crop complete. Editing tools enabled.', false, 'success');
-    } else {
-      this.showToast('Crop applied.', false, 'success');
-      const cropToolElement = document.getElementById('cropTool');
-      if (cropToolElement) {
-        cropToolElement.classList.remove('active');
-        this.animateToolActivation('crop', false);
-      }
-      this.setToolActive('crop', false);
-    }
+    this.redrawCanvas();
+    this.showToast("Crop completed successfully!", false, 'success');
+    this.animateToolActivation('crop', false);
+    this.setToolActive('crop', false);
 
   } catch (error) {
     console.error("Error during crop finalization:", error);
@@ -291,8 +209,7 @@ export function resetCropState() {
   if (this.canvas) {
     // Determine appropriate cursor
     let newCursor = 'default';
-    if (this.isToolActive('text')) newCursor = 'text';
-    else if (this.isToolActive('crop') || this.isToolActive('annotate') || this.isToolActive('arrow')) newCursor = 'crosshair';
+    if (this.isToolActive('crop') || this.isToolActive('annotate')) newCursor = 'crosshair';
     this.canvas.style.cursor = newCursor;
     // Reset canvas transform
     this.canvas.style.transform = '';
@@ -305,9 +222,6 @@ export function resetCropState() {
  * Copies the current canvas content to the clipboard as a PNG image.
  */
 export async function copyToClipboard() {
-  if (this.state.isEditingText) { 
-    this.finalizeTextInput(); 
-  }
   if (!this.canvas || this.canvas.width === 0 || this.canvas.height === 0) {
     this.showToast("Cannot copy empty image.", false, 'error'); 
     return; 
@@ -315,9 +229,6 @@ export async function copyToClipboard() {
   if (this.state.isDrawing && this.isToolActive('crop')) {
     this.showToast("Finalize cropping before copying.", false, 'warning'); 
     return; 
-  }
-  if (this.state.isDrawing && this.isToolActive('arrow')) {
-    this.cancelArrowDrawing(); // Cancel active arrow drawing
   }
 
   this.showSpinner(true);
@@ -353,9 +264,6 @@ export async function copyToClipboard() {
  * Saves the current canvas content as a PNG image file.
  */
 export async function saveImage() {
-  if (this.state.isEditingText) { 
-    this.finalizeTextInput(); 
-  }
   if (!this.canvas || this.canvas.width === 0 || this.canvas.height === 0) {
     this.showToast("Cannot save empty image.", false, 'error'); 
     return; 
@@ -363,9 +271,6 @@ export async function saveImage() {
   if (this.state.isDrawing && this.isToolActive('crop')) {
     this.showToast("Finalize cropping before saving.", false, 'warning'); 
     return; 
-  }
-  if (this.state.isDrawing && this.isToolActive('arrow')) {
-    this.cancelArrowDrawing(); // Cancel active arrow drawing
   }
 
   this.showSpinner(true);
@@ -425,23 +330,3 @@ export async function tryDownload(url, filename, retries) {
   }
 }
 
-/**
- * Cancels the current arrow drawing operation.
- */
-export function cancelArrowDrawing() {
-  if (!this.state.isDrawing || !this.isToolActive('arrow')) return;
-
-  console.log("Canceling arrow drawing operation.");
-  this.state.isDrawing = false;
-  this.drawingState.arrowStart = null;
-  this.drawingState.arrowEnd = null;
-
-  // Restore canvas from before preview if possible
-  this.restoreCanvasState();
-
-  // Reset cursor (assuming arrow tool is still technically active)
-  if (this.canvas) {
-    this.canvas.style.cursor = 'crosshair';
-    this.canvas.style.transform = '';
-  }
-}

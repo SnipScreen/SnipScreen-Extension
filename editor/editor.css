@@ -77,7 +77,6 @@ html, body {
   background: var(--bg-page);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border-toolbar);
   display: flex;
   justify-content: center;
   position: fixed;
@@ -240,33 +239,7 @@ html, body {
   outline: none;
 }
 
-/* Enhanced Text Input Overlay */
-#textInputOverlay {
-  position: absolute;
-  display: none;
-  background-color: var(--bg-element);
-  color: var(--text-primary);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-m);
-  box-shadow: var(--shadow-medium);
-  font: 16px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
-  padding: var(--spacing-s) var(--spacing-m);
-  margin: 0;
-  resize: none;
-  overflow: hidden;
-  white-space: pre;
-  outline: none;
-  z-index: 110;
-  transition: all var(--transition-fast) var(--transition-timing);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
 
-#textInputOverlay:focus {
-  border-color: var(--primary-accent);
-  box-shadow: 0 0 0 3px var(--primary-accent-light);
-  transform: scale(1.02);
-}
 
 /* Enhanced Toast Notification */
 .toast {
