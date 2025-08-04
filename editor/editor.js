@@ -7,6 +7,7 @@ import * as Events from './editor-events.js';
 
 class ScreenshotEditor {
   constructor() {
+    // Core canvas setup
     this.canvas = document.getElementById('editorCanvas');
     if (!this.canvas) throw new Error("Editor canvas element not found!");
     this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
@@ -17,47 +18,57 @@ class ScreenshotEditor {
         willReadFrequently: false
     });
 
-    this.activeTools = new Set();
-    this.isDrawing = false;
-    this.cropStart = null;
-    this.cropEnd = null;
-    this.annotateStart = null;
-    this.lastImageDataBeforeAnnotate = null;
+    // State management - simplified
+    this.state = {
+      activeTools: new Set(),
+      isDrawing: false,
+      isEditingText: false,
+      cropOnlyMode: false
+    };
 
-    this.originalImage = null;
+    // Drawing state
+    this.drawingState = {
+      cropStart: null,
+      cropEnd: null,
+      annotateStart: null,
+      arrowStart: null,
+      arrowEnd: null
+    };
 
-    this.annotationElements = [];
-    this.textElements = [];
-    this.arrowElements = [];
+    // Canvas state management
+    this.canvasState = {
+      originalImage: null,
+      lastImageData: null
+    };
 
-    this.isAddingText = false;
-    this.isEditingText = false;
-    this.movingTextElement = null;
-    this.textInput = document.getElementById('textInputOverlay');
-    this.selectedTextElement = null;
+    // UI elements
+    this.elements = {
+      annotationElements: [],
+      textElements: [],
+      arrowElements: [],
+      selectedTextElement: null,
+      movingTextElement: null,
+      textInput: document.getElementById('textInputOverlay')
+    };
 
-    // Default annotation styles
-    this.textFont = '20px sans-serif';
-    this.textColor = '#FF0000'; // Red
-    this.arrowColor = '#FF0000'; // Red
+    // Configuration
+    this.config = {
+      textFont: '20px sans-serif',
+      textColor: '#FF0000',
+      arrowColor: '#FF0000',
+      arrowHeadSize: 25,
+      textPadding: 4,
+      maxCanvasSize: { width: 1920, height: 1080 },
+      toolbarHeight: 56
+    };
 
-    this.textPadding = 4;
-    this.textInputBlurTimeout = null;
-
-    // Arrow state
-    this.isAddingArrow = false;
-    this.arrowStart = null;
-    this.arrowEnd = null;
-    this.arrowHeadSize = 25;
-    this.lastImageDataBeforeArrow = null;
-
-    // Editor state
-    this.maxCanvasSize = { width: 1920, height: 1080 };
-    this.cropOnlyMode = false;
-    this.canvasRect = null;
-    this.toolbarHeight = 56;
-    this.toastElement = null;
-    this.toastTimeout = null;
+    // UI state
+    this.ui = {
+      canvasRect: null,
+      toastElement: null,
+      toastTimeout: null,
+      textInputBlurTimeout: null
+    };
 
     // Assign Methods from Modules
     Object.assign(ScreenshotEditor.prototype, Utils);
@@ -94,56 +105,106 @@ class ScreenshotEditor {
           this.handleLoadFailure(`Editor setup failed: ${error.message}`);
       }
     }
-  } // End constructor
+  }
 
-    // Centralized redraw function for the VISIBLE canvas
-    redrawCanvas() {
-        if (!this.ctx || !this.offscreenCanvas || !this.canvas) {
-            console.error("Redraw called without valid context or canvases.");
-            return;
-        }
-        const ctx = this.ctx;
+  // Centralized redraw function for the VISIBLE canvas
+  redrawCanvas() {
+    if (!this.ctx || !this.offscreenCanvas || !this.canvas) {
+      console.error("Redraw called without valid context or canvases.");
+      return;
+    }
+    const ctx = this.ctx;
 
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // 1. Draw base image
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(this.offscreenCanvas, 0, 0);
+    // 1. Draw base image
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(this.offscreenCanvas, 0, 0);
 
-        // 2. Draw Annotations (Blackout Rects)
-        this.annotationElements.forEach(element => {
-            if (!element) return;
-            if (element.type === 'rect') {
-                ctx.fillStyle = element.color;
-                ctx.fillRect(element.x, element.y, element.width, element.height);
-            }
-        });
+    // 2. Draw Annotations (Blackout Rects)
+    this.elements.annotationElements.forEach(element => {
+      if (!element) return;
+      if (element.type === 'rect') {
+        ctx.fillStyle = element.color;
+        ctx.fillRect(element.x, element.y, element.width, element.height);
+      }
+    });
 
-        // 3. Draw Arrows
-        this.arrowElements.forEach(element => {
-            if (!element) return;
-            if (element.type === 'arrow') {
-                const headSize = element.headSize || this.arrowHeadSize;
-                this.drawArrow(ctx, element.x1, element.y1, element.x2, element.y2, element.color || this.arrowColor, headSize);
-            }
-        });
+    // 3. Draw Arrows
+    this.elements.arrowElements.forEach(element => {
+      if (!element) return;
+      if (element.type === 'arrow') {
+        const headSize = element.headSize || this.config.arrowHeadSize;
+        this.drawArrow(ctx, element.x1, element.y1, element.x2, element.y2, element.color || this.config.arrowColor, headSize);
+      }
+    });
 
-        // 4. Draw Text Elements (On top)
-        ctx.textBaseline = 'top';
-        this.textElements.forEach(element => {
-            if (!element || !element.text) return;
-            ctx.font = element.font || this.textFont;
-            ctx.fillStyle = element.color || this.textColor;
-            // Add shadow for visibility contrast
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-            ctx.shadowOffsetX = 1;
-            ctx.shadowOffsetY = 1;
-            ctx.shadowBlur = 2;
-            ctx.fillText(element.text, element.x, element.y);
-            // Reset shadow
-            ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; ctx.shadowBlur = 0;
-        });
-    } // End redrawCanvas
+    // 4. Draw Text Elements (On top)
+    ctx.textBaseline = 'top';
+    this.elements.textElements.forEach(element => {
+      if (!element || !element.text) return;
+      ctx.font = element.font || this.config.textFont;
+      ctx.fillStyle = element.color || this.config.textColor;
+      // Add shadow for visibility contrast
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 1;
+      ctx.shadowBlur = 2;
+      ctx.fillText(element.text, element.x, element.y);
+      // Reset shadow
+      ctx.shadowOffsetX = 0; 
+      ctx.shadowOffsetY = 0; 
+      ctx.shadowBlur = 0;
+    });
+  }
+
+  // Helper methods for state management
+  isToolActive(toolName) {
+    return this.state.activeTools.has(toolName);
+  }
+
+  setToolActive(toolName, active) {
+    if (active) {
+      this.state.activeTools.add(toolName);
+    } else {
+      this.state.activeTools.delete(toolName);
+    }
+  }
+
+  clearDrawingState() {
+    this.drawingState = {
+      cropStart: null,
+      cropEnd: null,
+      annotateStart: null,
+      arrowStart: null,
+      arrowEnd: null
+    };
+    this.state.isDrawing = false;
+  }
+
+  saveCanvasState() {
+    if (this.ctx && this.canvas) {
+      try {
+        this.canvasState.lastImageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      } catch (error) {
+        console.error("Failed to save canvas state:", error);
+        this.canvasState.lastImageData = null;
+      }
+    }
+  }
+
+  restoreCanvasState() {
+    if (this.canvasState.lastImageData && this.ctx) {
+      try {
+        this.ctx.putImageData(this.canvasState.lastImageData, 0, 0);
+      } catch (error) {
+        console.error("Failed to restore canvas state:", error);
+        this.redrawCanvas();
+      }
+    } else {
+      this.redrawCanvas();
+    }
+  }
 
 } // End of ScreenshotEditor class
 
