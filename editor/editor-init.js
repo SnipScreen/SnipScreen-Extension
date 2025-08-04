@@ -174,6 +174,11 @@ export async function loadScreenshot() {
         // Enable high-quality image smoothing for the main canvas as well
         this.ctx.imageSmoothingEnabled = true;
         this.ctx.imageSmoothingQuality = 'high';
+        
+        // Additional quality settings for crisp output
+        this.ctx.textRenderingOptimization = 'optimizeQuality';
+        this.offscreenCtx.textRenderingOptimization = 'optimizeQuality';
+        
         this.ctx.drawImage(this.offscreenCanvas, 0, 0);
 
         this.updateCanvasRect();

@@ -78,7 +78,7 @@ export function prepareFinalCanvas() {
     return finalCanvas;
   }
 
-  // Base image is the current state of the offscreen canvas
+  // Use the original image dimensions for maximum quality
   const sourceWidth = this.offscreenCanvas.width;
   const sourceHeight = this.offscreenCanvas.height;
   finalCanvas.width = sourceWidth;
@@ -88,21 +88,31 @@ export function prepareFinalCanvas() {
   finalCtx.imageSmoothingEnabled = true;
   finalCtx.imageSmoothingQuality = 'high';
 
-  // 1. Draw the base image
+  // Clear the canvas with a white background for better compatibility
+  finalCtx.fillStyle = '#FFFFFF';
+  finalCtx.fillRect(0, 0, sourceWidth, sourceHeight);
+
+  // 1. Draw the base image with high quality
   finalCtx.drawImage(this.offscreenCanvas, 0, 0);
 
-  // 2. Draw Annotation Elements (Blackout Rects)
+  // 2. Draw Annotation Elements (Blackout Rects) with crisp edges
   if (this.elements.annotationElements && this.elements.annotationElements.length > 0) {
     this.elements.annotationElements.forEach(element => {
       if (!element) return;
       if (element.type === 'rect') {
-        finalCtx.fillStyle = element.color;
-        finalCtx.fillRect(element.x, element.y, element.width, element.height);
+        // Use crisp black rectangles for better quality
+        finalCtx.fillStyle = '#000000';
+        finalCtx.fillRect(
+          Math.round(element.x), 
+          Math.round(element.y), 
+          Math.round(element.width), 
+          Math.round(element.height)
+        );
       }
       // Add other shapes here if implemented
     });
   }
 
-  console.log("Prepared final canvas including annotations.");
+  console.log(`Prepared final canvas at ${sourceWidth}x${sourceHeight} resolution.`);
   return finalCanvas;
 }

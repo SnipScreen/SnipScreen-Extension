@@ -232,7 +232,7 @@ export async function copyToClipboard() {
   }
 
   this.showSpinner(true);
-  this.showToast('Preparing image for clipboard...', true, 'info');
+  this.showToast('Preparing high-quality image for clipboard...', true, 'info');
   
   // Add visual feedback
   this.pulseAnimation('shareTool');
@@ -247,11 +247,26 @@ export async function copyToClipboard() {
 
     // NOTE: This action is directly initiated by the user clicking the 'Copy' button.
     const finalCanvas = this.prepareFinalCanvas();
+    
+    // Create high-quality blob with maximum quality settings
     const blob = await new Promise((resolve, reject) => {
-      finalCanvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed.')), 'image/png', 1.0);
+      finalCanvas.toBlob(
+        blob => blob ? resolve(blob) : reject(new Error('Canvas toBlob failed.')), 
+        'image/png', 
+        1.0 // Maximum quality
+      );
     });
-    await navigator.clipboard.write([ new ClipboardItem({ [blob.type]: blob }) ]);
-    this.showToast('Screenshot copied to clipboard!', false, 'success');
+    
+    // Ensure the blob has the correct MIME type
+    const highQualityBlob = new Blob([blob], { type: 'image/png' });
+    
+    await navigator.clipboard.write([ 
+      new ClipboardItem({ 
+        'image/png': highQualityBlob 
+      }) 
+    ]);
+    
+    this.showToast('High-quality screenshot copied to clipboard!', false, 'success');
   } catch (error) {
     console.error('Copy to clipboard failed:', error);
     this.showToast(`Copy failed: ${error.message || 'Unknown error'}`, false, 'error');
