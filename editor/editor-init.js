@@ -153,12 +153,26 @@ export async function loadScreenshot() {
         this.offscreenCanvas.width = canvasWidth;
         this.offscreenCanvas.height = canvasHeight;
 
-        this.canvas.style.maxWidth = '100%';
+        // Set canvas to fit within the available space while maintaining aspect ratio
         const toolbarElement = document.querySelector('.toolbar');
-        this.config.toolbarHeight = toolbarElement ? toolbarElement.offsetHeight : 56;
-        this.canvas.style.maxHeight = `calc(100vh - ${this.config.toolbarHeight + 48}px)`;
-        this.canvas.style.width = 'auto';
-        this.canvas.style.height = 'auto';
+        this.config.toolbarHeight = toolbarElement ? toolbarElement.offsetHeight : 64;
+        const containerElement = document.getElementById('editorContainer');
+        const containerRect = containerElement ? containerElement.getBoundingClientRect() : { width: window.innerWidth, height: window.innerHeight - this.config.toolbarHeight };
+        
+        // Calculate available space
+        const availableWidth = containerRect.width - 48; // Account for padding
+        const availableHeight = containerRect.height - 48; // Account for padding
+        
+        // Calculate scale to fit within available space
+        const scaleX = availableWidth / canvasWidth;
+        const scaleY = availableHeight / canvasHeight;
+        const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+        
+        // Set canvas display size
+        this.canvas.style.width = `${canvasWidth * scale}px`;
+        this.canvas.style.height = `${canvasHeight * scale}px`;
+        this.canvas.style.maxWidth = '100%';
+        this.canvas.style.maxHeight = '100%';
 
         // Enable high-quality image smoothing for better clarity
         this.offscreenCtx.imageSmoothingEnabled = true;

@@ -112,8 +112,7 @@ export function getTextElementAtPos(x, y) {
 }
 
 /**
- * Handles the mouse down event on the canvas.
- * Simplified: Only handles starting new drawings or moving text.
+ * Handles the mouse down event on the canvas with enhanced animations.
  */
 export function handleMouseDown(e) {
   e.preventDefault();
@@ -122,7 +121,7 @@ export function handleMouseDown(e) {
   const pos = this.getMousePos(e);
 
   // Reset interaction states
-  this.state.isDrawing = false; // Assume not drawing initially
+  this.state.isDrawing = false;
   this.elements.selectedTextElement = null;
   this.elements.movingTextElement = null;
 
@@ -131,23 +130,25 @@ export function handleMouseDown(e) {
     console.log("Canvas clicked while editing text - finalizing.");
     if (this.ui.textInputBlurTimeout) clearTimeout(this.ui.textInputBlurTimeout);
     this.finalizeTextInput();
-    return; // Stop further processing for this click
+    return;
   }
 
   // 2. Check for Clicking Existing TEXT Element to Move (Only if no tool active)
-  if (!this.state.activeTools.size) { // Only allow moving if NO tool is active
+  if (!this.state.activeTools.size) {
     const clickedTextElement = this.getTextElementAtPos(pos.x, pos.y);
     if (clickedTextElement) {
-      this.state.isDrawing = true; // Use isDrawing flag for moving interaction
+      this.state.isDrawing = true;
       this.elements.selectedTextElement = clickedTextElement;
       this.elements.movingTextElement = {
         element: clickedTextElement,
         startX: clickedTextElement.x, startY: clickedTextElement.y,
         offsetX: pos.x - clickedTextElement.x, offsetY: pos.y - clickedTextElement.y
       };
-      if (this.canvas) this.canvas.style.cursor = 'move';
+      if (this.canvas) {
+        this.canvas.style.cursor = 'move';
+      }
       console.log("Started moving text:", clickedTextElement.id);
-      return; // Stop processing, we are moving text
+      return;
     }
   }
 
@@ -169,7 +170,9 @@ export function handleMouseDown(e) {
     this.state.isDrawing = true;
     this.drawingState.cropStart = pos;
     this.drawingState.cropEnd = pos;
-    if (this.canvas) this.canvas.style.cursor = 'crosshair';
+          if (this.canvas) {
+        this.canvas.style.cursor = 'crosshair';
+      }
     return;
   }
   
@@ -185,8 +188,7 @@ export function handleMouseDown(e) {
 }
 
 /**
- * Handles the mouse move event on the canvas.
- * Simplified: Only handles drawing previews or moving text.
+ * Handles the mouse move event on the canvas with enhanced feedback.
  */
 export function handleMouseMove(e) {
   const pos = this.getMousePos(e);
@@ -198,16 +200,17 @@ export function handleMouseMove(e) {
     requestAnimationFrame(() => {
       if (this.elements.movingTextElement) this.redrawCanvas();
     });
-    return; // Don't handle other logic if moving text
+    return;
   }
 
   // --- Update Cursor When Hovering (Not Moving) ---
   const noActiveToolOrInteraction = !this.state.activeTools.size && !this.state.isDrawing && !this.elements.movingTextElement;
   if (noActiveToolOrInteraction) {
     const hoveredText = this.getTextElementAtPos(pos.x, pos.y);
-    if (this.canvas) this.canvas.style.cursor = hoveredText ? 'move' : 'default';
+    if (this.canvas) {
+      this.canvas.style.cursor = hoveredText ? 'move' : 'default';
+    }
   } else if (!this.state.isDrawing && this.state.activeTools.size > 0) {
-    // Set cursor based on active tool if not drawing
     let cursor = 'default';
     if (this.isToolActive('text')) cursor = 'text';
     else if (this.isToolActive('crop') || this.isToolActive('annotate') || this.isToolActive('arrow')) cursor = 'crosshair';
@@ -215,7 +218,7 @@ export function handleMouseMove(e) {
   }
 
   // --- Handle Tool Drawing Previews ---
-  if (!this.state.isDrawing) return; // Exit if not actively drawing a tool shape
+  if (!this.state.isDrawing) return;
 
   // 1. Crop Preview
   if (this.isToolActive('crop') && this.drawingState.cropStart) {
@@ -249,40 +252,47 @@ export function handleMouseMove(e) {
 }
 
 /**
- * Handles the mouse up event on the canvas.
- * Simplified: Only handles finalizing new drawings or text moving.
+ * Handles the mouse up event on the canvas with enhanced animations.
  */
 export function handleMouseUp(e) {
-  if (e.button !== 0) return; // Only left button
+  if (e.button !== 0) return;
 
   const wasMovingText = this.elements.movingTextElement;
-  const wasDrawingTool = this.state.isDrawing && !wasMovingText; // Was drawing a new shape
+  const wasDrawingTool = this.state.isDrawing && !wasMovingText;
 
   // --- Finalize TEXT Moving ---
   if (wasMovingText && this.state.isDrawing) {
     console.log(`Finished moving text:`, wasMovingText.element.id);
-    this.redrawCanvas(); // Redraw one last time
+    this.redrawCanvas();
     this.state.isDrawing = false;
     this.elements.movingTextElement = null;
-    // Reset cursor based on hover state at final position (only if no tool is active)
+    
+    // Reset canvas transform with animation
+    if (this.canvas) {
+      this.canvas.style.transform = 'translateY(-2px) scale(1)';
+      setTimeout(() => {
+        if (this.canvas) this.canvas.style.transform = '';
+      }, 200);
+    }
+    
+    // Reset cursor based on hover state
     if (!this.state.activeTools.size) {
       const finalPos = this.getMousePos(e);
       const hoveredText = this.getTextElementAtPos(finalPos.x, finalPos.y);
       if (this.canvas) this.canvas.style.cursor = hoveredText ? 'move' : 'default';
     } else {
-      // Set cursor based on active tool
       let cursor = 'default';
       if (this.isToolActive('text')) cursor = 'text';
       else if (this.isToolActive('crop') || this.isToolActive('annotate') || this.isToolActive('arrow')) cursor = 'crosshair';
       if (this.canvas) this.canvas.style.cursor = cursor;
     }
-    return; // Stop processing, move is done
+    return;
   }
 
   // --- Finalize Tool Drawing ---
   if (wasDrawingTool) {
     const pos = this.getMousePos(e);
-    this.state.isDrawing = false; // Stop drawing state
+    this.state.isDrawing = false;
 
     let activeToolName = null;
     if (this.isToolActive('crop') && this.drawingState.cropStart) activeToolName = 'crop';
@@ -306,6 +316,8 @@ export function handleMouseUp(e) {
         };
         this.elements.annotationElements.push(newAnnotation);
         this.redrawCanvas();
+        // Add success feedback
+        this.showToast("Annotation added", false, 'success');
       } else {
         this.restoreCanvasState();
       }
@@ -316,7 +328,7 @@ export function handleMouseUp(e) {
       const startX = this.drawingState.arrowStart.x, startY = this.drawingState.arrowStart.y;
       const endX = this.drawingState.arrowEnd.x, endY = this.drawingState.arrowEnd.y;
       const lengthSq = (endX - startX) ** 2 + (endY - startY) ** 2;
-      if (lengthSq > 25) { // Min length check
+      if (lengthSq > 25) {
         const newArrow = { 
           type: 'arrow', 
           id: `arrow-${Date.now()}`, 
@@ -326,12 +338,22 @@ export function handleMouseUp(e) {
         };
         this.elements.arrowElements.push(newArrow);
         this.redrawCanvas();
+        // Add success feedback
+        this.showToast("Arrow added", false, 'success');
       } else {
         this.restoreCanvasState();
       }
       this.drawingState.arrowStart = null; 
       this.drawingState.arrowEnd = null;
       if (this.isToolActive('arrow') && this.canvas) this.canvas.style.cursor = 'crosshair';
+    }
+
+    // Reset canvas transform with animation
+    if (this.canvas) {
+      this.canvas.style.transform = 'translateY(-2px) scale(1)';
+      setTimeout(() => {
+        if (this.canvas) this.canvas.style.transform = '';
+      }, 200);
     }
 
     // General cleanup & cursor reset
@@ -342,8 +364,7 @@ export function handleMouseUp(e) {
 }
 
 /**
- * Handles the mouse leave event on the canvas.
- * Simplified: Only cancels active tool drawing or text moving.
+ * Handles the mouse leave event on the canvas with enhanced feedback.
  */
 export function handleMouseLeave(e) {
   // --- Cancel TEXT Moving ---
@@ -354,21 +375,24 @@ export function handleMouseLeave(e) {
     this.state.isDrawing = false;
     this.elements.movingTextElement = null;
     this.elements.selectedTextElement = null;
-    if (this.canvas) this.canvas.style.cursor = 'default';
+    if (this.canvas) {
+      this.canvas.style.cursor = 'default';
+      this.canvas.style.transform = '';
+    }
     this.redrawCanvas();
     this.showToast("Text move cancelled.", false, 'info');
     return;
   }
 
   // --- Cancel Tool Drawing ---
-  if (this.state.isDrawing) { // Only cancel if actively drawing a tool shape
+  if (this.state.isDrawing) {
     console.log("Mouse left canvas during drawing, cancelling operation.");
     const toolWasCrop = this.isToolActive('crop');
     const toolWasAnnotate = this.isToolActive('annotate');
     const toolWasArrow = this.isToolActive('arrow');
-    this.state.isDrawing = false; // Stop drawing state FIRST
+    this.state.isDrawing = false;
 
-    let cursor = 'default'; // Default cursor after cancel
+    let cursor = 'default';
 
     if (toolWasCrop) {
       this.resetCropState();
@@ -389,7 +413,10 @@ export function handleMouseLeave(e) {
       if (this.isToolActive('arrow')) cursor = 'crosshair';
     }
 
-    if (this.canvas) this.canvas.style.cursor = cursor;
+    if (this.canvas) {
+      this.canvas.style.cursor = cursor;
+      this.canvas.style.transform = '';
+    }
   }
 }
 
@@ -426,7 +453,7 @@ export function showTextInput(x, y) {
 
   this.state.isEditingText = true;
 
-  this.currentTextElement = { // Temporary object while editing
+  this.currentTextElement = {
     id: `text-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     text: '', x: x, y: y, font: this.config.textFont, color: this.config.textColor, isEditing: true
   };
@@ -444,9 +471,17 @@ export function showTextInput(x, y) {
   this.elements.textInput.style.color = this.config.textColor;
   this.elements.textInput.style.width = '30px';
   this.elements.textInput.style.height = 'auto';
+  this.elements.textInput.style.opacity = '0';
+  this.elements.textInput.style.transform = 'scale(0.9)';
   this.resizeTextInput();
 
-  setTimeout(() => this.elements.textInput.focus(), 50);
+  // Animate in
+  requestAnimationFrame(() => {
+    this.elements.textInput.style.opacity = '1';
+    this.elements.textInput.style.transform = 'scale(1)';
+  });
+
+  setTimeout(() => this.elements.textInput.focus(), 100);
   console.log("Showing text input at canvas coords:", x, y);
 
   const textToolElement = document.getElementById('textTool');
@@ -455,10 +490,17 @@ export function showTextInput(x, y) {
 
 export function hideTextInput() {
   if (!this.elements.textInput) return;
-  this.elements.textInput.style.display = 'none';
-  this.elements.textInput.value = '';
-  this.state.isEditingText = false;
-  this.currentTextElement = null;
+  
+  // Animate out
+  this.elements.textInput.style.opacity = '0';
+  this.elements.textInput.style.transform = 'scale(0.9)';
+  
+  setTimeout(() => {
+    this.elements.textInput.style.display = 'none';
+    this.elements.textInput.value = '';
+    this.state.isEditingText = false;
+    this.currentTextElement = null;
+  }, 150);
 
   // Re-evaluate cursor based on active tools
   let newCursor = 'default';
@@ -500,7 +542,7 @@ export function finalizeTextInput() {
 
   const currentX = this.currentTextElement.x;
   const currentY = this.currentTextElement.y;
-  this.hideTextInput(); // Hides input, resets editing state
+  this.hideTextInput();
 
   if (enteredText.trim()) {
     const existingElementIndex = this.elements.textElements.findIndex(el => el.id === wasEditingId);
@@ -515,6 +557,8 @@ export function finalizeTextInput() {
       };
       this.elements.textElements.push(newElement);
       console.log("Added new text element:", wasEditingId);
+      // Add success feedback
+      this.showToast("Text added", false, 'success');
     }
     this.redrawCanvas();
   } else {

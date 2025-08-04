@@ -42,12 +42,17 @@ export function toggleTool(tool) {
   if (this.isToolActive(tool)) {
     console.log(`Deactivating tool: ${tool}`);
     this.setToolActive(tool, false);
+    
+    // Animate tool deactivation
     toolElement.classList.remove('active');
+    this.animateToolActivation(tool, false);
     
     // Reset cursor only if NO other drawing tool remains active
     const anyDrawingToolActive = drawingTools.some(t => this.isToolActive(t));
     if (!anyDrawingToolActive && this.canvas) {
       this.canvas.style.cursor = 'default';
+      // Reset canvas transform
+      this.canvas.style.transform = '';
     }
 
     // If deactivating crop, redraw to remove guides
@@ -65,23 +70,37 @@ export function toggleTool(tool) {
         console.log(`Deactivating conflicting tool: ${otherTool}`);
         this.setToolActive(otherTool, false);
         const otherElement = document.getElementById(`${otherTool}Tool`);
-        if (otherElement) otherElement.classList.remove('active');
+        if (otherElement) {
+          otherElement.classList.remove('active');
+          this.animateToolActivation(otherTool, false);
+        }
       }
     });
 
     // Now activate the selected tool
     this.setToolActive(tool, true);
     toolElement.classList.add('active');
+    
+    // Animate tool activation
+    this.animateToolActivation(tool, true);
 
     // Set cursor and provide feedback
     if (tool === 'crop' || tool === 'annotate') {
-      if (this.canvas) this.canvas.style.cursor = 'crosshair';
+      if (this.canvas) {
+        this.canvas.style.cursor = 'crosshair';
+        // Add subtle canvas feedback
+        this.canvas.style.transform = 'translateY(-1px) scale(1.002)';
+      }
       this.showToast(tool === 'crop' ? "Drag to select crop area." : "Click and drag to draw rectangles.", false, 'info');
     } else if (tool === 'text') {
-      if (this.canvas) this.canvas.style.cursor = 'text';
+      if (this.canvas) {
+        this.canvas.style.cursor = 'text';
+      }
       this.showToast("Click on the image to add text.", false, 'info');
     } else if (tool === 'arrow') {
-      if (this.canvas) this.canvas.style.cursor = 'crosshair';
+      if (this.canvas) {
+        this.canvas.style.cursor = 'crosshair';
+      }
       this.showToast("Click and drag to draw an arrow.", false, 'info');
     }
   }
@@ -246,7 +265,10 @@ export async function completeCrop() {
     } else {
       this.showToast('Crop applied.', false, 'success');
       const cropToolElement = document.getElementById('cropTool');
-      if (cropToolElement) cropToolElement.classList.remove('active');
+      if (cropToolElement) {
+        cropToolElement.classList.remove('active');
+        this.animateToolActivation('crop', false);
+      }
       this.setToolActive('crop', false);
     }
 
@@ -272,6 +294,8 @@ export function resetCropState() {
     if (this.isToolActive('text')) newCursor = 'text';
     else if (this.isToolActive('crop') || this.isToolActive('annotate') || this.isToolActive('arrow')) newCursor = 'crosshair';
     this.canvas.style.cursor = newCursor;
+    // Reset canvas transform
+    this.canvas.style.transform = '';
     // Redraw to remove guides and show current elements
     this.redrawCanvas();
   }
@@ -298,6 +322,10 @@ export async function copyToClipboard() {
 
   this.showSpinner(true);
   this.showToast('Preparing image for clipboard...', true, 'info');
+  
+  // Add visual feedback
+  this.pulseAnimation('shareTool');
+  
   try {
     if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === 'undefined') {
       throw new Error('Clipboard API (write with ClipboardItem) is not supported.'); 
@@ -342,6 +370,10 @@ export async function saveImage() {
 
   this.showSpinner(true);
   this.showToast('Preparing image for download...', true, 'info');
+  
+  // Add visual feedback
+  this.pulseAnimation('saveTool');
+  
   try {
     const finalCanvas = this.prepareFinalCanvas();
     const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
@@ -408,5 +440,8 @@ export function cancelArrowDrawing() {
   this.restoreCanvasState();
 
   // Reset cursor (assuming arrow tool is still technically active)
-  if (this.canvas) this.canvas.style.cursor = 'crosshair';
+  if (this.canvas) {
+    this.canvas.style.cursor = 'crosshair';
+    this.canvas.style.transform = '';
+  }
 }
