@@ -2,7 +2,7 @@
 import { throttle } from './editor-utils.js';
 
 /**
- * Sets up the primary event listeners for the canvas and document.
+ * Sets up the primary event listeners for the canvas.
  */
 export function setupEventListeners() {
   if (!this.canvas) {
@@ -14,20 +14,16 @@ export function setupEventListeners() {
   this.boundHandleMouseMove = this.handleMouseMove.bind(this);
   this.boundHandleMouseUp = this.handleMouseUp.bind(this);
   this.boundHandleMouseLeave = this.handleMouseLeave.bind(this);
-  this.boundHandleDocumentClick = this.handleDocumentClick.bind(this); // For finalizing text
 
   // Canvas Listeners
   this.canvas.addEventListener('mousedown', this.boundHandleMouseDown);
   this.canvas.addEventListener('mousemove', this.boundHandleMouseMove);
   this.canvas.addEventListener('mouseup', this.boundHandleMouseUp);
   this.canvas.addEventListener('mouseleave', this.boundHandleMouseLeave);
-
-  // Document Listener (for handling clicks outside text input)
-  document.addEventListener('click', this.boundHandleDocumentClick, true);
 }
 
 /**
- * Removes event listeners added by setupEventListeners and text input setup.
+ * Removes event listeners added by setupEventListeners.
  */
 export function removeEditorEventListeners() {
   console.log("Removing editor event listeners.");
@@ -37,32 +33,6 @@ export function removeEditorEventListeners() {
     this.canvas.removeEventListener('mouseup', this.boundHandleMouseUp);
     this.canvas.removeEventListener('mouseleave', this.boundHandleMouseLeave);
   }
-  document.removeEventListener('click', this.boundHandleDocumentClick, true);
-
-  // Remove text input listeners
-  if (this.elements.textInput) {
-    this.elements.textInput.removeEventListener('blur', this.boundHandleTextInputBlur);
-    this.elements.textInput.removeEventListener('keydown', this.boundHandleTextInputKeydown);
-    this.elements.textInput.removeEventListener('input', this.boundResizeTextInput);
-    this.elements.textInput.style.display = 'none';
-  }
-}
-
-/**
- * Sets up listeners specifically for the text input overlay.
- */
-export function setupTextInputListeners() {
-  if (!this.elements.textInput) {
-    console.error("Text input overlay element not found.");
-    return;
-  }
-  this.boundHandleTextInputBlur = this.handleTextInputBlur.bind(this);
-  this.boundHandleTextInputKeydown = this.handleTextInputKeydown.bind(this);
-  this.boundResizeTextInput = this.resizeTextInput.bind(this);
-  this.elements.textInput.addEventListener('blur', this.boundHandleTextInputBlur);
-  this.elements.textInput.addEventListener('keydown', this.boundHandleTextInputKeydown);
-  this.elements.textInput.addEventListener('input', this.boundResizeTextInput);
-  console.log("Text input listeners setup.");
 }
 
 /**
@@ -87,32 +57,7 @@ export function getMousePos(e) {
 }
 
 /**
- * Finds the text element at a given canvas coordinate.
- */
-export function getTextElementAtPos(x, y) {
-  if (!this.ctx || !this.elements.textElements) return null;
-  for (let i = this.elements.textElements.length - 1; i >= 0; i--) {
-    const element = this.elements.textElements[i];
-    if (!element || typeof element.x !== 'number' || typeof element.y !== 'number') continue;
-    this.ctx.font = element.font;
-    const metrics = this.ctx.measureText(element.text);
-    const fontHeightMatch = element.font.match(/(\d+)(px|pt|em|rem)/);
-    const fontHeight = fontHeightMatch ? parseInt(fontHeightMatch[1], 10) : 18;
-    const textHeight = fontHeight * 1.2;
-    const padding = this.config.textPadding;
-    const elX = element.x - padding;
-    const elY = element.y - padding;
-    const elWidth = metrics.width + 2 * padding;
-    const elHeight = textHeight + 2 * padding;
-    if (x >= elX && x <= elX + elWidth && y >= elY && y <= elY + elHeight) {
-      return element;
-    }
-  }
-  return null;
-}
-
-/**
- * Handles the mouse down event on the canvas with enhanced animations.
+ * Handles the mouse down event on the canvas.
  */
 export function handleMouseDown(e) {
   e.preventDefault();
@@ -122,57 +67,15 @@ export function handleMouseDown(e) {
 
   // Reset interaction states
   this.state.isDrawing = false;
-  this.elements.selectedTextElement = null;
-  this.elements.movingTextElement = null;
 
-  // 1. Handle Text Input Finalization (if active)
-  if (this.state.isEditingText && e.target === this.canvas) {
-    console.log("Canvas clicked while editing text - finalizing.");
-    if (this.ui.textInputBlurTimeout) clearTimeout(this.ui.textInputBlurTimeout);
-    this.finalizeTextInput();
-    return;
-  }
-
-  // 2. Check for Clicking Existing TEXT Element to Move (Only if no tool active)
-  if (!this.state.activeTools.size) {
-    const clickedTextElement = this.getTextElementAtPos(pos.x, pos.y);
-    if (clickedTextElement) {
-      this.state.isDrawing = true;
-      this.elements.selectedTextElement = clickedTextElement;
-      this.elements.movingTextElement = {
-        element: clickedTextElement,
-        startX: clickedTextElement.x, startY: clickedTextElement.y,
-        offsetX: pos.x - clickedTextElement.x, offsetY: pos.y - clickedTextElement.y
-      };
-      if (this.canvas) {
-        this.canvas.style.cursor = 'move';
-      }
-      console.log("Started moving text:", clickedTextElement.id);
-      return;
-    }
-  }
-
-  // 3. If NOT Moving Text, Check for Starting NEW Drawing Actions (if tool active)
-  if (this.isToolActive('text')) {
-    this.showTextInput(pos.x, pos.y);
-    return;
-  }
-  
-  if (this.isToolActive('arrow')) {
-    this.state.isDrawing = true;
-    this.drawingState.arrowStart = pos;
-    this.drawingState.arrowEnd = pos;
-    this.saveCanvasState();
-    return;
-  }
-  
+  // Check for starting drawing actions (if tool active)
   if (this.isToolActive('crop')) {
     this.state.isDrawing = true;
     this.drawingState.cropStart = pos;
     this.drawingState.cropEnd = pos;
-          if (this.canvas) {
-        this.canvas.style.cursor = 'crosshair';
-      }
+    if (this.canvas) {
+      this.canvas.style.cursor = 'crosshair';
+    }
     return;
   }
   
@@ -188,36 +91,19 @@ export function handleMouseDown(e) {
 }
 
 /**
- * Handles the mouse move event on the canvas with enhanced feedback.
+ * Handles the mouse move event on the canvas.
  */
 export function handleMouseMove(e) {
   const pos = this.getMousePos(e);
 
-  // --- Handle TEXT Moving ---
-  if (this.elements.movingTextElement && this.state.isDrawing) {
-    this.elements.movingTextElement.element.x = pos.x - this.elements.movingTextElement.offsetX;
-    this.elements.movingTextElement.element.y = pos.y - this.elements.movingTextElement.offsetY;
-    requestAnimationFrame(() => {
-      if (this.elements.movingTextElement) this.redrawCanvas();
-    });
-    return;
-  }
-
-  // --- Update Cursor When Hovering (Not Moving) ---
-  const noActiveToolOrInteraction = !this.state.activeTools.size && !this.state.isDrawing && !this.elements.movingTextElement;
-  if (noActiveToolOrInteraction) {
-    const hoveredText = this.getTextElementAtPos(pos.x, pos.y);
-    if (this.canvas) {
-      this.canvas.style.cursor = hoveredText ? 'move' : 'default';
-    }
-  } else if (!this.state.isDrawing && this.state.activeTools.size > 0) {
+  // Update cursor based on active tools
+  if (!this.state.isDrawing && this.state.activeTools.size > 0) {
     let cursor = 'default';
-    if (this.isToolActive('text')) cursor = 'text';
-    else if (this.isToolActive('crop') || this.isToolActive('annotate') || this.isToolActive('arrow')) cursor = 'crosshair';
+    if (this.isToolActive('crop') || this.isToolActive('annotate')) cursor = 'crosshair';
     if (this.canvas) this.canvas.style.cursor = cursor;
   }
 
-  // --- Handle Tool Drawing Previews ---
+  // Handle tool drawing previews
   if (!this.state.isDrawing) return;
 
   // 1. Crop Preview
@@ -240,56 +126,17 @@ export function handleMouseMove(e) {
       }
     });
   }
-  // 3. Arrow Preview
-  else if (this.isToolActive('arrow') && this.drawingState.arrowStart) {
-    requestAnimationFrame(() => {
-      if (!this.state.isDrawing || !this.isToolActive('arrow') || !this.drawingState.arrowStart) return;
-      this.drawingState.arrowEnd = pos;
-      this.restoreCanvasState();
-      this.drawArrow(this.ctx, this.drawingState.arrowStart.x, this.drawingState.arrowStart.y, this.drawingState.arrowEnd.x, this.drawingState.arrowEnd.y, this.config.arrowColor, this.config.arrowHeadSize);
-    });
-  }
 }
 
 /**
- * Handles the mouse up event on the canvas with enhanced animations.
+ * Handles the mouse up event on the canvas.
  */
 export function handleMouseUp(e) {
   if (e.button !== 0) return;
 
-  const wasMovingText = this.elements.movingTextElement;
-  const wasDrawingTool = this.state.isDrawing && !wasMovingText;
+  const wasDrawingTool = this.state.isDrawing;
 
-  // --- Finalize TEXT Moving ---
-  if (wasMovingText && this.state.isDrawing) {
-    console.log(`Finished moving text:`, wasMovingText.element.id);
-    this.redrawCanvas();
-    this.state.isDrawing = false;
-    this.elements.movingTextElement = null;
-    
-    // Reset canvas transform with animation
-    if (this.canvas) {
-      this.canvas.style.transform = 'translateY(-2px) scale(1)';
-      setTimeout(() => {
-        if (this.canvas) this.canvas.style.transform = '';
-      }, 200);
-    }
-    
-    // Reset cursor based on hover state
-    if (!this.state.activeTools.size) {
-      const finalPos = this.getMousePos(e);
-      const hoveredText = this.getTextElementAtPos(finalPos.x, finalPos.y);
-      if (this.canvas) this.canvas.style.cursor = hoveredText ? 'move' : 'default';
-    } else {
-      let cursor = 'default';
-      if (this.isToolActive('text')) cursor = 'text';
-      else if (this.isToolActive('crop') || this.isToolActive('annotate') || this.isToolActive('arrow')) cursor = 'crosshair';
-      if (this.canvas) this.canvas.style.cursor = cursor;
-    }
-    return;
-  }
-
-  // --- Finalize Tool Drawing ---
+  // Finalize tool drawing
   if (wasDrawingTool) {
     const pos = this.getMousePos(e);
     this.state.isDrawing = false;
@@ -297,7 +144,6 @@ export function handleMouseUp(e) {
     let activeToolName = null;
     if (this.isToolActive('crop') && this.drawingState.cropStart) activeToolName = 'crop';
     else if (this.isToolActive('annotate') && this.drawingState.annotateStart) activeToolName = 'annotate';
-    else if (this.isToolActive('arrow') && this.drawingState.arrowStart) activeToolName = 'arrow';
 
     // Finalize based on the active tool
     if (activeToolName === 'crop') {
@@ -316,44 +162,12 @@ export function handleMouseUp(e) {
         };
         this.elements.annotationElements.push(newAnnotation);
         this.redrawCanvas();
-        // Add success feedback
         this.showToast("Annotation added", false, 'success');
       } else {
         this.restoreCanvasState();
       }
       this.drawingState.annotateStart = null;
       if (this.isToolActive('annotate') && this.canvas) this.canvas.style.cursor = 'crosshair';
-    } else if (activeToolName === 'arrow') {
-      this.drawingState.arrowEnd = pos;
-      const startX = this.drawingState.arrowStart.x, startY = this.drawingState.arrowStart.y;
-      const endX = this.drawingState.arrowEnd.x, endY = this.drawingState.arrowEnd.y;
-      const lengthSq = (endX - startX) ** 2 + (endY - startY) ** 2;
-      if (lengthSq > 25) {
-        const newArrow = { 
-          type: 'arrow', 
-          id: `arrow-${Date.now()}`, 
-          x1: startX, y1: startY, x2: endX, y2: endY, 
-          color: this.config.arrowColor, 
-          headSize: this.config.arrowHeadSize 
-        };
-        this.elements.arrowElements.push(newArrow);
-        this.redrawCanvas();
-        // Add success feedback
-        this.showToast("Arrow added", false, 'success');
-      } else {
-        this.restoreCanvasState();
-      }
-      this.drawingState.arrowStart = null; 
-      this.drawingState.arrowEnd = null;
-      if (this.isToolActive('arrow') && this.canvas) this.canvas.style.cursor = 'crosshair';
-    }
-
-    // Reset canvas transform with animation
-    if (this.canvas) {
-      this.canvas.style.transform = 'translateY(-2px) scale(1)';
-      setTimeout(() => {
-        if (this.canvas) this.canvas.style.transform = '';
-      }, 200);
     }
 
     // General cleanup & cursor reset
@@ -364,32 +178,14 @@ export function handleMouseUp(e) {
 }
 
 /**
- * Handles the mouse leave event on the canvas with enhanced feedback.
+ * Handles the mouse leave event on the canvas.
  */
 export function handleMouseLeave(e) {
-  // --- Cancel TEXT Moving ---
-  if (this.elements.movingTextElement && this.state.isDrawing) {
-    console.log("Mouse left canvas while moving text, cancelling move.");
-    this.elements.movingTextElement.element.x = this.elements.movingTextElement.startX;
-    this.elements.movingTextElement.element.y = this.elements.movingTextElement.startY;
-    this.state.isDrawing = false;
-    this.elements.movingTextElement = null;
-    this.elements.selectedTextElement = null;
-    if (this.canvas) {
-      this.canvas.style.cursor = 'default';
-      this.canvas.style.transform = '';
-    }
-    this.redrawCanvas();
-    this.showToast("Text move cancelled.", false, 'info');
-    return;
-  }
-
-  // --- Cancel Tool Drawing ---
+  // Cancel tool drawing
   if (this.state.isDrawing) {
     console.log("Mouse left canvas during drawing, cancelling operation.");
     const toolWasCrop = this.isToolActive('crop');
     const toolWasAnnotate = this.isToolActive('annotate');
-    const toolWasArrow = this.isToolActive('arrow');
     this.state.isDrawing = false;
 
     let cursor = 'default';
@@ -405,196 +201,10 @@ export function handleMouseLeave(e) {
       this.showToast("Annotation cancelled (mouse left canvas).", false, 'info');
       if (this.isToolActive('annotate')) cursor = 'crosshair';
     }
-    if (toolWasArrow) {
-      this.restoreCanvasState();
-      this.drawingState.arrowStart = null; 
-      this.drawingState.arrowEnd = null;
-      this.showToast("Arrow drawing cancelled (mouse left canvas).", false, 'info');
-      if (this.isToolActive('arrow')) cursor = 'crosshair';
-    }
 
     if (this.canvas) {
       this.canvas.style.cursor = cursor;
-      this.canvas.style.transform = '';
     }
-  }
-}
-
-/**
- * Handles clicks on the document, primarily to finalize text input.
- */
-export function handleDocumentClick(e) {
-  if (this.state.isEditingText && e.target !== this.elements.textInput && e.target !== this.canvas) {
-    console.log("Document click detected outside text input/canvas.");
-    if (this.ui.textInputBlurTimeout) clearTimeout(this.ui.textInputBlurTimeout);
-    this.ui.textInputBlurTimeout = setTimeout(() => {
-      if (this.state.isEditingText) {
-        console.log("Finalizing text via document click timeout.");
-        this.finalizeTextInput();
-      }
-      this.ui.textInputBlurTimeout = null;
-    }, 50);
-  }
-}
-
-// ====================================
-// --- Text Input Specific Functions ---
-// ====================================
-
-export function showTextInput(x, y) {
-  if (!this.elements.textInput || !this.canvas || !this.ui.canvasRect) {
-    console.error("Cannot show text input - required elements missing.");
-    return;
-  }
-  if (this.state.isEditingText) { 
-    console.warn("Tried to show text input while already editing."); 
-    return; 
-  }
-
-  this.state.isEditingText = true;
-
-  this.currentTextElement = {
-    id: `text-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    text: '', x: x, y: y, font: this.config.textFont, color: this.config.textColor, isEditing: true
-  };
-
-  const scaleX = this.ui.canvasRect.width / this.canvas.width;
-  const scaleY = this.ui.canvasRect.height / this.canvas.height;
-  const overlayX = this.ui.canvasRect.left + x * scaleX;
-  const overlayY = this.ui.canvasRect.top + y * scaleY;
-
-  this.elements.textInput.value = '';
-  this.elements.textInput.style.display = 'block';
-  this.elements.textInput.style.left = `${overlayX}px`;
-  this.elements.textInput.style.top = `${overlayY}px`;
-  this.elements.textInput.style.font = this.config.textFont;
-  this.elements.textInput.style.color = this.config.textColor;
-  this.elements.textInput.style.width = '30px';
-  this.elements.textInput.style.height = 'auto';
-  this.elements.textInput.style.opacity = '0';
-  this.elements.textInput.style.transform = 'scale(0.9)';
-  this.resizeTextInput();
-
-  // Animate in
-  requestAnimationFrame(() => {
-    this.elements.textInput.style.opacity = '1';
-    this.elements.textInput.style.transform = 'scale(1)';
-  });
-
-  setTimeout(() => this.elements.textInput.focus(), 100);
-  console.log("Showing text input at canvas coords:", x, y);
-
-  const textToolElement = document.getElementById('textTool');
-  if (textToolElement) textToolElement.classList.remove('active');
-}
-
-export function hideTextInput() {
-  if (!this.elements.textInput) return;
-  
-  // Animate out
-  this.elements.textInput.style.opacity = '0';
-  this.elements.textInput.style.transform = 'scale(0.9)';
-  
-  setTimeout(() => {
-    this.elements.textInput.style.display = 'none';
-    this.elements.textInput.value = '';
-    this.state.isEditingText = false;
-    this.currentTextElement = null;
-  }, 150);
-
-  // Re-evaluate cursor based on active tools
-  let newCursor = 'default';
-  if (this.isToolActive('text')) {
-    newCursor = 'text';
-  } else if (this.isToolActive('crop') || this.isToolActive('annotate') || this.isToolActive('arrow')) {
-    newCursor = 'crosshair';
-  }
-  if (this.canvas) this.canvas.style.cursor = newCursor;
-
-  console.log("Hiding text input.");
-}
-
-export function resizeTextInput() {
-  if (!this.elements.textInput || !this.ctx) return;
-  this.ctx.font = this.config.textFont;
-  const text = this.elements.textInput.value;
-  const lines = text.split('\n');
-  let maxWidth = 0;
-  lines.forEach(line => {
-    const metrics = this.ctx.measureText(line || ' ');
-    maxWidth = Math.max(maxWidth, metrics.width);
-  });
-
-  const newWidth = Math.max(30, maxWidth + this.config.textPadding * 2);
-  const fontHeight = parseInt(this.config.textFont, 10) * 1.4;
-  const newHeight = Math.max(fontHeight, lines.length * fontHeight + this.config.textPadding);
-
-  this.elements.textInput.style.width = `${newWidth}px`;
-  this.elements.textInput.style.height = `${newHeight}px`;
-}
-
-export function finalizeTextInput() {
-  if (!this.state.isEditingText || !this.currentTextElement || !this.elements.textInput) return;
-
-  const enteredText = this.elements.textInput.value;
-  const wasEditingId = this.currentTextElement.id;
-  console.log("Finalizing text input. Text:", enteredText);
-
-  const currentX = this.currentTextElement.x;
-  const currentY = this.currentTextElement.y;
-  this.hideTextInput();
-
-  if (enteredText.trim()) {
-    const existingElementIndex = this.elements.textElements.findIndex(el => el.id === wasEditingId);
-    if (existingElementIndex > -1) {
-      this.elements.textElements[existingElementIndex].text = enteredText;
-      this.elements.textElements[existingElementIndex].isEditing = false;
-      console.log("Updated existing text element:", wasEditingId);
-    } else {
-      const newElement = {
-        id: wasEditingId, text: enteredText, x: currentX, y: currentY,
-        font: this.config.textFont, color: this.config.textColor
-      };
-      this.elements.textElements.push(newElement);
-      console.log("Added new text element:", wasEditingId);
-      // Add success feedback
-      this.showToast("Text added", false, 'success');
-    }
-    this.redrawCanvas();
-  } else {
-    console.log("No text entered or only whitespace, cancelling add/edit.");
-    this.redrawCanvas();
-  }
-  this.currentTextElement = null;
-}
-
-export function handleTextInputBlur(e) {
-  console.log("Text input blur event.");
-  if (this.ui.textInputBlurTimeout || !this.state.isEditingText) return;
-  this.ui.textInputBlurTimeout = setTimeout(() => {
-    if (this.state.isEditingText) {
-      console.log("Finalizing text via blur timeout.");
-      this.finalizeTextInput();
-    }
-    this.ui.textInputBlurTimeout = null;
-  }, 150);
-}
-
-export function handleTextInputKeydown(e) {
-  if (!this.state.isEditingText) return;
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    if (this.ui.textInputBlurTimeout) clearTimeout(this.ui.textInputBlurTimeout);
-    this.ui.textInputBlurTimeout = null;
-    this.finalizeTextInput();
-  } else if (e.key === 'Escape') {
-    e.preventDefault();
-    if (this.ui.textInputBlurTimeout) clearTimeout(this.ui.textInputBlurTimeout);
-    this.ui.textInputBlurTimeout = null;
-    this.hideTextInput();
-    this.redrawCanvas();
-  } else {
-    setTimeout(() => this.resizeTextInput(), 0);
   }
 }
 

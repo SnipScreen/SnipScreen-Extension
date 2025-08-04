@@ -22,7 +22,6 @@ class ScreenshotEditor {
     this.state = {
       activeTools: new Set(),
       isDrawing: false,
-      isEditingText: false,
       cropOnlyMode: false
     };
 
@@ -30,9 +29,7 @@ class ScreenshotEditor {
     this.drawingState = {
       cropStart: null,
       cropEnd: null,
-      annotateStart: null,
-      arrowStart: null,
-      arrowEnd: null
+      annotateStart: null
     };
 
     // Canvas state management
@@ -43,21 +40,11 @@ class ScreenshotEditor {
 
     // UI elements
     this.elements = {
-      annotationElements: [],
-      textElements: [],
-      arrowElements: [],
-      selectedTextElement: null,
-      movingTextElement: null,
-      textInput: document.getElementById('textInputOverlay')
+      annotationElements: []
     };
 
     // Configuration
     this.config = {
-      textFont: '20px sans-serif',
-      textColor: '#FF0000',
-      arrowColor: '#FF0000',
-      arrowHeadSize: 25,
-      textPadding: 4,
       maxCanvasSize: { width: 1920, height: 1080 },
       toolbarHeight: 56
     };
@@ -66,8 +53,7 @@ class ScreenshotEditor {
     this.ui = {
       canvasRect: null,
       toastElement: null,
-      toastTimeout: null,
-      textInputBlurTimeout: null
+      toastTimeout: null
     };
 
     // Assign Methods from Modules
@@ -91,7 +77,6 @@ class ScreenshotEditor {
       this.initializeTools();
       this.loadScreenshot();
       this.setupEventListeners();
-      this.setupTextInputListeners();
 
       window.addEventListener('resize', this.boundUpdateCanvasRect);
       window.addEventListener('beforeunload', this.boundCleanup);
@@ -132,33 +117,6 @@ class ScreenshotEditor {
         ctx.fillRect(element.x, element.y, element.width, element.height);
       }
     });
-
-    // 3. Draw Arrows
-    this.elements.arrowElements.forEach(element => {
-      if (!element) return;
-      if (element.type === 'arrow') {
-        const headSize = element.headSize || this.config.arrowHeadSize;
-        this.drawArrow(ctx, element.x1, element.y1, element.x2, element.y2, element.color || this.config.arrowColor, headSize);
-      }
-    });
-
-    // 4. Draw Text Elements (On top)
-    ctx.textBaseline = 'top';
-    this.elements.textElements.forEach(element => {
-      if (!element || !element.text) return;
-      ctx.font = element.font || this.config.textFont;
-      ctx.fillStyle = element.color || this.config.textColor;
-      // Add shadow for visibility contrast
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-      ctx.shadowOffsetX = 1;
-      ctx.shadowOffsetY = 1;
-      ctx.shadowBlur = 2;
-      ctx.fillText(element.text, element.x, element.y);
-      // Reset shadow
-      ctx.shadowOffsetX = 0; 
-      ctx.shadowOffsetY = 0; 
-      ctx.shadowBlur = 0;
-    });
   }
 
   // Helper methods for state management
@@ -178,9 +136,7 @@ class ScreenshotEditor {
     this.drawingState = {
       cropStart: null,
       cropEnd: null,
-      annotateStart: null,
-      arrowStart: null,
-      arrowEnd: null
+      annotateStart: null
     };
     this.state.isDrawing = false;
   }

@@ -25,11 +25,6 @@ export function cleanup() {
 
   // Clear element arrays
   this.elements.annotationElements = [];
-  this.elements.textElements = [];
-  this.elements.arrowElements = [];
-  this.elements.selectedTextElement = null;
-  this.elements.movingTextElement = null;
-  this.state.isEditingText = false;
 
   // Clear UI elements / timeouts
   if (this.ui.toastElement) { 
@@ -39,10 +34,6 @@ export function cleanup() {
   if (this.ui.toastTimeout) { 
     clearTimeout(this.ui.toastTimeout); 
     this.ui.toastTimeout = null; 
-  }
-  if (this.ui.textInputBlurTimeout) { 
-    clearTimeout(this.ui.textInputBlurTimeout); 
-    this.ui.textInputBlurTimeout = null; 
   }
   this.canvasState.lastImageData = null;
 
@@ -264,8 +255,6 @@ export function initializeTools() {
   const tools = {
     'cropTool': 'crop',
     'annotateTool': 'annotate', // Blackout
-    'textTool': 'text',
-    'arrowTool': 'arrow', // Added
     'shareTool': this.copyToClipboard,
     'saveTool': this.saveImage
   };
@@ -277,24 +266,10 @@ export function initializeTools() {
         event.stopPropagation();
         try {
           if (typeof action === 'string') { // Tool toggle
-            if (this.state.isEditingText && ['crop', 'annotate', 'text', 'arrow'].includes(action)) { 
-              this.finalizeTextInput(); 
-            }
-            if (this.state.isDrawing && this.isToolActive('arrow') && action !== 'arrow') {
-              console.log("Switching tool, canceling arrow draw");
-              this.cancelArrowDrawing();
-            }
             this.toggleTool(action);
           } else if (typeof action === 'function') { // Action like save/copy
-            if (this.state.isEditingText) { 
-              this.finalizeTextInput(); 
-            }
-            if (this.state.isDrawing && this.isToolActive('arrow')) {
-              console.log("Action clicked, canceling arrow draw");
-              this.cancelArrowDrawing();
-            }
             // Deselect any active drawing tool before action
-            ['text', 'crop', 'annotate', 'arrow'].forEach(toolName => {
+            ['crop', 'annotate'].forEach(toolName => {
               if (this.isToolActive(toolName)) { 
                 this.toggleTool(toolName); 
               }

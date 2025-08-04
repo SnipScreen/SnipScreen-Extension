@@ -60,51 +60,6 @@ export function drawCornerHandles(x, y, width, height) {
 }
 
 /**
- * Draws an arrow on the given canvas context.
- * @param {CanvasRenderingContext2D} ctx - The context to draw on.
- * @param {number} x1 - Start X coordinate.
- * @param {number} y1 - Start Y coordinate.
- * @param {number} x2 - End X coordinate (arrow tip).
- * @param {number} y2 - End Y coordinate (arrow tip).
- * @param {string} color - The color of the arrow.
- * @param {number} headSize - The length of the arrowhead lines.
- */
-export function drawArrow(ctx, x1, y1, x2, y2, color, headSize) {
-  if (Math.abs(x1 - x2) < 1 && Math.abs(y1 - y2) < 1) return; // Avoid drawing zero-length arrows
-
-  ctx.save(); // Save context state
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
-  ctx.lineWidth = 3; // <<<< INCREASED Line width for the arrow shaft
-
-  // Draw line segment
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-
-  // Draw arrowhead
-  // Adjust angles for a slightly wider head to match thickness? Optional.
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const angle1 = angle + Math.PI / 7; // Angle for one side of the arrowhead (adjust divisor for width)
-  const angle2 = angle - Math.PI / 7; // Angle for the other side
-
-  const x3 = x2 - headSize * Math.cos(angle1);
-  const y3 = y2 - headSize * Math.sin(angle1);
-  const x4 = x2 - headSize * Math.cos(angle2);
-  const y4 = y2 - headSize * Math.sin(angle2);
-
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(x3, y3);
-  ctx.lineTo(x4, y4);
-  ctx.closePath();
-  ctx.fill(); // Fill the arrowhead
-
-  ctx.restore(); // Restore context state
-}
-
-/**
  * Creates a new canvas containing the final composed image (base + elements).
  * Used for saving or copying.
  * @returns {HTMLCanvasElement} A new canvas element with the final image data.
@@ -148,38 +103,6 @@ export function prepareFinalCanvas() {
     });
   }
 
-  // 3. Draw Arrow Elements
-  if (this.elements.arrowElements && this.elements.arrowElements.length > 0) {
-    this.elements.arrowElements.forEach(element => {
-      if (!element) return;
-      if (element.type === 'arrow') {
-        // Pass the correct headSize from the element or default
-        const headSize = element.headSize || this.config.arrowHeadSize;
-        this.drawArrow(finalCtx, element.x1, element.y1, element.x2, element.y2, element.color, headSize);
-      }
-    });
-  }
-
-  // 4. Draw Text Elements (on top)
-  if (this.elements.textElements && this.elements.textElements.length > 0) {
-    finalCtx.textBaseline = 'top';
-    this.elements.textElements.forEach(element => {
-      if (!element || !element.text) return;
-      finalCtx.font = element.font;
-      finalCtx.fillStyle = element.color;
-      // Apply shadow for contrast
-      finalCtx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-      finalCtx.shadowOffsetX = 1; 
-      finalCtx.shadowOffsetY = 1; 
-      finalCtx.shadowBlur = 2;
-      finalCtx.fillText(element.text, element.x, element.y);
-      // Reset shadow
-      finalCtx.shadowOffsetX = 0; 
-      finalCtx.shadowOffsetY = 0; 
-      finalCtx.shadowBlur = 0;
-    });
-  }
-
-  console.log("Prepared final canvas including annotations, arrows, and text elements.");
+  console.log("Prepared final canvas including annotations.");
   return finalCanvas;
 }
