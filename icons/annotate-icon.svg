@@ -1,0 +1,7 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Annotate/Blackout icon with modern design -->
+  <rect x="2" y="2" width="12" height="12" rx="2" fill="currentColor"/>
+  <path d="M4 6H12V8H4V6Z" fill="white" opacity="0.8"/>
+  <path d="M4 9H10V11H4V9Z" fill="white" opacity="0.6"/>
+  <path d="M4 12H8V14H4V12Z" fill="white" opacity="0.4"/>
+</svg> 

@@ -120,10 +120,11 @@ html, body {
   -webkit-user-select: none;
 }
 
-.tool-item i {
-  font-size: 16px;
-  line-height: 1;
+.tool-item svg {
+  width: 16px;
+  height: 16px;
   transition: transform var(--transition-fast) var(--transition-timing);
+  color: inherit;
 }
 
 .tool-item:hover {
@@ -133,7 +134,7 @@ html, body {
   transform: translateY(-1px);
 }
 
-.tool-item:hover i {
+.tool-item:hover svg {
   transform: scale(1.1);
 }
 
@@ -145,7 +146,7 @@ html, body {
   transform: translateY(-1px);
 }
 
-.tool-item.active i {
+.tool-item.active svg {
   transform: scale(1.05);
 }
 
@@ -277,7 +278,7 @@ html, body {
   animation: pulse 2s ease-in-out infinite;
 }
 
-.spinner i {
+.spinner-svg {
   animation: spin 1s linear infinite;
 }
 
@@ -318,7 +319,7 @@ html, body {
   transform: translateY(0) scale(0.95);
 }
 
-.tool-item:active i {
+.tool-item:active svg {
   transform: scale(0.95);
 }
 
@@ -370,8 +371,9 @@ html, body {
     height: 36px;
   }
   
-  .tool-item i {
-    font-size: 14px;
+  .tool-item svg {
+    width: 14px;
+    height: 14px;
   }
   
   #editorContainer {
@@ -395,8 +397,9 @@ html, body {
     height: 32px;
   }
   
-  .tool-item i {
-    font-size: 12px;
+  .tool-item svg {
+    width: 12px;
+    height: 12px;
   }
   
   #editorContainer {
@@ -421,8 +424,9 @@ html, body {
     height: 44px;
   }
   
-  .tool-item i {
-    font-size: 18px;
+  .tool-item svg {
+    width: 18px;
+    height: 18px;
   }
   
   #editorContainer {
